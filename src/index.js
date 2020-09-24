@@ -2,8 +2,22 @@ const express = require('express');
 
 const app = express();
 
-app.get('/', (req, res)=>{
-    res.send('<h2>Hola </h2>');
+app.set('view engine', 'ejs');
+
+app.get('/abc/def', (req, res)=>{
+    // res.send('<h2>Hola </h2>');
+    res.render('home', {name: 'Shinder'});
+});
+
+
+
+app.use(express.static(__dirname + '/../public'));
+
+app.use((req, res)=>{
+    res
+        .type('text/plain')
+        .status(404)
+        .send('找不到網頁');
 });
 
 app.listen(3000, ()=>{
