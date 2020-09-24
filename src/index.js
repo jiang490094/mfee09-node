@@ -4,16 +4,21 @@ const app = express();
 
 app.set('view engine', 'ejs');
 
-app.get('/abc/def', (req, res)=>{
+app.get('/', (req, res)=>{
     // res.send('<h2>Hola </h2>');
     res.render('home', {name: 'Shinder'});
 });
 
+app.get('/json-sales', (req, res)=>{
+    const sales = require(__dirname + '/../data/sales');
+    // res.json(sales);
+    res.render('json-sales', {sales})
+});
 
 
 app.use(express.static(__dirname + '/../public'));
 
-app.use((req, res)=>{
+app.use((req, res )=>{
     res
         .type('text/plain')
         .status(404)
