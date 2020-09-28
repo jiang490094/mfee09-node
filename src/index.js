@@ -1,8 +1,15 @@
+require('dotenv').config();
+
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const {v4: uuidv4} = require('uuid');
 const axios = require('axios');
+const session = require('express-session');
+const MysqlStore = require('express-mysql-session')(session);
+const moment = require('moment-timezone');
+const db = require('./db_connect2');
+const sessionStore = new MysqlStore({}, db);
 const upload = multer({dest: __dirname + '/../tmp_uploads'});
 
 const app = express();
@@ -11,11 +18,19 @@ app.set('view engine', 'ejs');
 
 app.use( express.urlencoded({extended: false}) );
 app.use( express.json() );
+app.use(session({
+    saveUninitialized: false,
+    resave: false,
+    secret: 'jghdkasskjfks37848kj',
+    store: sessionStore,
+    cookie: {
+        maxAge: 1200000
+    }
+}));
 app.use((req, res, next)=>{
-res.locals.title = '小新喵喵店';
-next();
-});
-
+    res.locals.title = '小新牛排店';
+    next();
+})
 
 app.get('/', (req, res)=>{
     // res.send('<h2>Hola </h2>');
@@ -24,7 +39,7 @@ app.get('/', (req, res)=>{
 
 app.get('/json-sales', (req, res)=>{
     const sales = require(__dirname + '/../data/sales');
-    res.locals.title += ' -json';
+    res.locals.title += ' - JSON';
     // res.json(sales);
     res.render('json-sales', {sales})
 });
@@ -110,27 +125,52 @@ app.get('/my-params2/*?/*?', (req, res)=> {
     res.json(req.params);
 });
 
-// app.get(/^\/09\d{2}\-?\d{3}\-?\d{3}$/, (req, res)=>{
-//     let u = req.url.slice(1);
-//     u = u.split('?')[0];
-//     u = u.split('-').join('');
-//     res.send(u);
-//     });
-
-
-app.get(/^\/m\/09\d{2}-?\d{3}-?\d{3}$/i, (req, res)=> {       let u = req.url.slice(3).split('?')[0];
-        u = u.replace(/-/g, '');
-        res.send(u);
-    });
+app.get(/^\/m\/09\d{2}-?\d{3}-?\d{3}$/i, (req, res)=> {
+    let u = req.url.slice(3).split('?')[0];
+    u = u.replace(/-/g, '');
+    res.send(u);
+});
 
 app.use(require(__dirname + '/routes/admin2'));
-
 app.use('/members', require(__dirname + '/routes/admin3'));
 
 app.get('/yahoo', async (req, res)=>{
     const response = await axios.get('https://tw.yahoo.com/');
     res.send(response.data);
 });
+
+app.get('/try-session', (req, res)=>{
+    req.session.myVar = req.session.myVar || 0;
+    req.session.myVar++;
+    console.log(req.session);
+    res.json({
+        myVar: req.session.myVar,
+        session: req.session
+    });
+});
+
+app.get('/try-moment', (req, res)=>{
+    const fm = 'YYYY-MM-DD HH:mm:ss';
+    const now = moment(new Date());
+
+    res.json({
+        t1: new Date(),
+        t2: now.format(fm),
+        t2a: now.tz('Europe/London').format(fm),
+        t3: moment(req.session.cookie.expires).format(fm),
+        t3b: moment(req.session.cookie.expires).tz('Asia/Tokyo').format(fm),
+        'process.env.DB_NAME': process.env.DB_NAME,
+    });
+});
+
+app.get('/try-db', (req, res)=>{
+    db.query('SELECT * FROM address_book LIMIT 2')
+        .then(([results])=>{
+            res.json(results);
+        })
+});
+
+app.use('/address-book', require(__dirname + '/routes/address-book'));
 
 app.use( express.static(__dirname + '/../public'));
 
