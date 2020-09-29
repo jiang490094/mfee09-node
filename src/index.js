@@ -28,7 +28,7 @@ app.use(session({
     }
 }));
 app.use((req, res, next)=>{
-    res.locals.title = '小新牛排店';
+    res.locals.title = '小新喵喵店';
     next();
 })
 
