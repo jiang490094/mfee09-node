@@ -5,14 +5,56 @@ const upload = require(__dirname + '/../upload-img-module');
 
 const router = express.Router();
 
-router.get('/', (req, res)=>{
-    res.send('address-book');
+router.use((req, res, next)=>{
+    const whiteList = ['list', 'login'];
+
+    let u = req.url.split('?')[0];
+    u = u.split('/');
+    //console.log(`address-book: ${u[1]}`);
+    if(whiteList.includes(u[1])){
+        next();
+    } else {
+        if(! req.session.admin){
+            res.redirect('/address-book/list');
+        } else {
+            next();
+        }
+    }
 });
+
+router.get('/', (req, res)=>{
+    res.redirect('/address-book/list');
+});
+
+
+
+router.get('/login', (req, res)=>{
+    res.render('address-book/login');
+});
+router.post('/login', async (req, res)=>{
+    const output = {
+        body: req.body,
+        success: false,
+    }
+    const sql = "SELECT `sid`, `account`, `nickname` FROM `admins` WHERE account=? AND password=SHA1(?)";
+    const [rs] = await db.query(sql, [req.body.account, req.body.password]);
+    if(rs.length){
+        req.session.admin = rs[0];
+        output.success = true;
+    }
+    res.json(output);
+})
+router.get('/logout', (req, res)=>{
+    delete req.session.admin;
+    res.redirect('/address-book/list');
+})
+
+
 
 async function getListData (req) {
     const output = {
         page: 0,
-        perPage: 5,
+        perPage: 10,
         totalRows: 0,
         totalPages: 0,
         rows: [],
@@ -118,7 +160,11 @@ router.get('/api', async (req, res)=>{
 
 router.get('/list', async (req, res)=>{
     const output = await getListData(req);
-    res.render('address-book/list', output);
+    if(req.session.admin){
+        res.render('address-book/list', output);
+    } else {
+        res.render('address-book/list-noadmin', output);
+    }
 });
 
 router.get('/add', (req, res)=>{
@@ -153,18 +199,16 @@ router.post('/edit/:sid', upload.none(), async (req, res)=>{
     const data = {...req.body};
     const sql = "UPDATE `address_book` SET ? WHERE `sid`=?";
     const [{affectedRows, changedRows}] = await db.query(sql, [ data, req.params.sid ]);
-// {"fieldCount":0,"affectedRows":1,"insertId":0,"info":"Rows matched: 1  Changed: 0  Warnings: 0","serverStatus":2,"warningStatus":0,"changedRows":0}
-
-
-res.json({
-            success: !!changedRows,
-            affectedRows,
-            changedRows,
-        });
+    // {"fieldCount":0,"affectedRows":1,"insertId":0,"info":"Rows matched: 1  Changed: 0  Warnings: 0","serverStatus":2,"warningStatus":0,"changedRows":0}
+    res.json({
+        success: !!changedRows,
+        affectedRows,
+        changedRows,
+    });
 });
 
-router.delete('/del/:sid', async (req, res)=> {
-    
+router.delete('/del/:sid',  async (req, res)=> {
+
     const sql = "DELETE FROM `address_book` WHERE sid=?";
     const [results] = await db.query(sql, [req.params.sid]);
 
@@ -181,7 +225,7 @@ router.delete('/del/:sid', async (req, res)=> {
         修改的表單呈現 GET, 接收資料 POST
 
     刪除  /del/:sid
-        delete
+        DELETE
 */
 
 

@@ -8,6 +8,7 @@ const axios = require('axios');
 const session = require('express-session');
 const MysqlStore = require('express-mysql-session')(session);
 const moment = require('moment-timezone');
+const cors = require('cors');
 const db = require('./db_connect2');
 const sessionStore = new MysqlStore({}, db);
 const upload = multer({dest: __dirname + '/../tmp_uploads'});
@@ -18,6 +19,14 @@ app.set('view engine', 'ejs');
 
 app.use( express.urlencoded({extended: false}) );
 app.use( express.json() );
+const corsOptions = {
+    credentials: true,
+    origin: function(origin, cb){
+        console.log(`origin: ${origin}`);
+        cb(null, true);
+    }
+};
+app.use(cors(corsOptions));
 app.use(session({
     saveUninitialized: false,
     resave: false,
@@ -29,6 +38,7 @@ app.use(session({
 }));
 app.use((req, res, next)=>{
     res.locals.title = '小新喵喵店';
+    res.locals.sess = req.session;
     next();
 })
 
@@ -134,6 +144,7 @@ app.get(/^\/m\/09\d{2}-?\d{3}-?\d{3}$/i, (req, res)=> {
 app.use(require(__dirname + '/routes/admin2'));
 app.use('/members', require(__dirname + '/routes/admin3'));
 
+// async非同步，await
 app.get('/yahoo', async (req, res)=>{
     const response = await axios.get('https://tw.yahoo.com/');
     res.send(response.data);
