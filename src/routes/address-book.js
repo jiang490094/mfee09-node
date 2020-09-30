@@ -1,12 +1,13 @@
 const express = require('express');
 const moment = require('moment-timezone');
+const jwt = require('jsonwebtoken');
 const db = require(__dirname + '/../db_connect2');
 const upload = require(__dirname + '/../upload-img-module');
 
 const router = express.Router();
 
 router.use((req, res, next)=>{
-    const whiteList = ['list', 'login'];
+    const whiteList = ['list', 'login', 'verify'];
 
     let u = req.url.split('?')[0];
     u = u.split('/');
@@ -41,6 +42,8 @@ router.post('/login', async (req, res)=>{
     if(rs.length){
         req.session.admin = rs[0];
         output.success = true;
+
+        output.token = jwt.sign({...rs[0]}, process.env.TOKEN_SECRET);
     }
     res.json(output);
 })
@@ -49,6 +52,16 @@ router.get('/logout', (req, res)=>{
     res.redirect('/address-book/list');
 })
 
+router.post('/verify', (req, res)=>{
+    // req.body.token
+    jwt.verify(req.body.token, process.env.TOKEN_SECRET, function(error, payload){
+        if(error){
+            res.json({error: error});
+        } else {
+            res.json(payload);
+        }
+    });
+})
 
 
 async function getListData (req) {
