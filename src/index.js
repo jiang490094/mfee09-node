@@ -192,6 +192,6 @@ app.use((req, res )=>{
         .send('找不到網頁');
 });
 
-app.listen(3000, ()=>{
+app.listen(3030, ()=>{
     console.log('伺服器已啟動...喵');
 })
